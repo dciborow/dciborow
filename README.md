@@ -10,4 +10,4 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 
-[![My GitHub Stats](https://github-readme-stats.vercel.app/api/?username=gordonby&count_private=true&theme=tokyonight&showicons=true)]()
+[![My GitHub Stats](https://github-readme-stats.vercel.app/api/?username=dciborow&count_private=true&theme=tokyonight&showicons=true)]()
