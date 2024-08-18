@@ -1,0 +1,78 @@
+name: "PR Validation and Auto-Fix"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+
+jobs:
+  main:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-pr-prefix:
+    name: Auto PR Prefix
+    needs: main
+    runs-on: ubuntu-latest
+    if: ${{ failure() }}  # Run only if the "main" job fails
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch PR diff
+        id: fetch_pr_diff
+        run: |
+          echo "::group::Fetching PR Diff"
+          pr_diff=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3.diff" \
+            https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}.diff)
+          echo "::endgroup::"
+          
+          # Save the diff to an environment file without using a here-document
+          echo "pr_diff=$pr_diff" >> $GITHUB_ENV
+
+      - name: Call Azure OpenAI to get PR prefix
+        id: call_openai
+        run: |
+          pr_diff="${{ env.pr_diff }}"
+          echo "::group::Constructing and Sending Prompt to OpenAI"
+          # Construct the prompt JSON using jq safely
+          prompt=$(jq -n --arg diff "$pr_diff" '{
+            "prompt": "Determine the PR prefix for the following diff: \($diff)\n\nAvailable types:\n- feat: A new feature\n- fix: A bug fix\n- docs: Documentation only changes\n- style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)\n- refactor: A code change that neither fixes a bug nor adds a feature\n- perf: A code change that improves performance\n- test: Adding missing tests or correcting existing tests\n- build: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)\n- ci: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)\n- chore: Other changes that don't modify src or test files\n- revert: Reverts a previous commit"
+          }')
+          # Make the API request
+          curl -X POST "${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.AZURE_OPENAI_API_KEY }}" \
+            -d "$prompt" \
+            -o response.json
+          echo "::endgroup::"
+          # Extract the PR prefix from the response
+          pr_prefix=$(jq -r .choices[0].text < response.json)
+          echo "pr_prefix=$pr_prefix" >> $GITHUB_ENV
+
+      - name: Update PR title with prefix
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --title "${{ env.pr_prefix }}: ${{ steps.fetch_pr_title.outputs.pr_title }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  rerun-main:
+    name: Revalidate PR title
+    needs: auto-pr-prefix
+    runs-on: ubuntu-latest
+    if: ${{ success() }}  # Run only if "auto-pr-prefix" was successful
+
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
