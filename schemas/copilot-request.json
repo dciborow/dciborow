@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "organization": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "projectName": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "repositoryName": {
+      "type": "string"
+    },
+    "pull_request_id": {
+      "type": "integer"
+    },
+    "pull_request_ids": {
+      "type": "string"
+    },
+    "request": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "build_id": {
+      "type": "string"
+    },
+    "payload_build_id": {
+      "type": "string"
+    },
+    "include_code_changes": {
+      "type": "boolean"
+    },
+    "include_work_item_titles": {
+      "type": "string"
+    },
+    "include_commits": {
+      "type": "string"
+    },
+    "include_build_logs": {
+      "type": "string"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "target_commit_id": {
+      "type": "string"
+    },
+    "source_commit_id": {
+      "type": "string"
+    },
+    "include_pr_titles": {
+      "type": "string"
+    },
+    "include_pr_descriptions": {
+      "type": "string"
+    }
+  },
+  "required": ["organization", "project", "repository", "request", "build_id"]
+}
